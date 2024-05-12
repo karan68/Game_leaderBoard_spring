@@ -1,6 +1,8 @@
 package com.example.scores;
 
+import com.example.scores.entity.Admin;
 import com.example.scores.entity.Score;
+import com.example.scores.repository.AdminRepository;
 import com.example.scores.repository.ScoreRepository;
 import com.github.javafaker.Faker;
 import org.springframework.boot.CommandLineRunner;
@@ -19,7 +21,7 @@ public class ScoresApplication {
     }
 
     @Bean
-    public CommandLineRunner run(ScoreRepository ScoreRepository) throws Exception {
+    public CommandLineRunner run(ScoreRepository ScoreRepository,AdminRepository AdminRepository) throws Exception {
         Faker faker = new Faker();
 
         return (String[] args) -> {
@@ -29,8 +31,14 @@ public class ScoresApplication {
                 String name = faker.name().fullName();
                 Score userR = new Score(name, x);
                 ScoreRepository.save(userR);
+
             }
-            ScoreRepository.findAll().forEach(user -> System.out.println(user));
+            String admin_name = "admin";
+            String admin_password = "password";
+            String admin_email = "admin@example.com";
+            Admin admin = new Admin(admin_name,admin_password,admin_email);
+            AdminRepository.save(admin);
+
         };
     }
 }
