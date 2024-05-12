@@ -1,0 +1,6 @@
+com/example/scores/model/ScoreModel.class
+com/example/scores/config/DataSourceConfig.class
+com/example/scores/entity/Score.class
+com/example/scores/ScoresApplication.class
+com/example/scores/controller/ScoresController.class
+com/example/scores/repository/ScoreRepository.class

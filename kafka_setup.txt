@@ -1,0 +1,30 @@
+#Download 
+download kafka from https://kafka.apache.org/downloads and unzip and go to terminal there 
+
+# Command to kill ports
+kill -9 $(lsof -i tcp:9092,8080,2181)
+
+# Command to run Zookeeper
+bin/zookeeper-server-start.sh config/zookeeper.properties
+
+# Command to run Server
+bin/kafka-server-start.sh config/server.properties
+
+# Command to run standalone server
+bin/connect-standalone.sh config/connect-standalone.properties
+
+# Create a topic "anishmahapatra"
+bin/kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 3 --topic anishmahapatra
+
+# Command to check for the list of topics
+bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+#run the command for players 
+bin/kafka-console-producer.sh --broker-list localhost:9092 --topic scores
+>karan,99
+>vishal,20
+
+now listen the api in postman
+
+
+for refernce see this doc - https://anishmahapatra.medium.com/apache-kafka-102-how-to-set-up-kafka-on-your-local-68f432dfb1ab
