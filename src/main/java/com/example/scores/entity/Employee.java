@@ -1,13 +1,11 @@
 package com.example.scores.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+
 
 @Entity
 @Table(name = "employees")
-@Data
-@NoArgsConstructor
+
 public class Employee {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

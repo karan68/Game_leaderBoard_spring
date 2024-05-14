@@ -1,5 +1,6 @@
 package com.example.scores.controller;
 
+import com.example.scores.Exception.PlayerNotFoundException;
 import com.example.scores.entity.Admin;
 import com.example.scores.entity.Employee;
 import com.example.scores.entity.Score;
@@ -106,7 +107,7 @@ public class ScoresController {
         if (n <= 0) {
             return ResponseEntity.badRequest().build();
         }
-        List<Score> scores = scoreRepository.findTopNByOrderByScoreDesc(n);
+        List<Score> scores = scoreRepository.findTopNByOrderByScoreDescCached(n);
         return ResponseEntity.ok(scores);
     }
 
@@ -198,10 +199,11 @@ public class ScoresController {
     @Operation(summary = "get an employee based on id ")
     @GetMapping("/scores/{id}")
     public ResponseEntity<?> getScoreById(@PathVariable Long id) {
-        // Check if the score ID exists
-        if (!scoreRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
+
+//        // Check if the score ID exists
+//        if (!scoreRepository.existsById(id)) {
+//            return ResponseEntity.notFound().build();
+//        }
 
         // Fetch the score entity from the database
         Score score = scoreRepository.findById(id).orElse(null);
@@ -210,7 +212,7 @@ public class ScoresController {
         if (score != null) {
             return ResponseEntity.ok(score);
         } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching score");
+            throw new PlayerNotFoundException("Player not found with id: " + id); //throwing custom error
         }
     }
 }

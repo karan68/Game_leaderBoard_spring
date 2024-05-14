@@ -18,7 +18,7 @@ public class AuthService {
     @Autowired
     private EmployeeRepository employeeRepository;
 
-    private Map<String, String> authenticatedUsers = new HashMap<>();
+    private final Map<String, String> authenticatedUsers = new HashMap<>();
 
     public String authenticateAdmin(String username, String password) {
         Admin admin = adminRepository.findByUsername(username);

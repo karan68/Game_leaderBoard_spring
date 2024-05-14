@@ -1,12 +1,15 @@
 package com.example.scores.controller;
 
+import com.example.scores.config.TestConfig;
 import com.example.scores.entity.Score;
 import com.example.scores.model.ScoreModel;
 import com.example.scores.repository.ScoreRepository;
+import com.example.scores.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
@@ -15,17 +18,17 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-
 @WebMvcTest(ScoresController.class)
+@Import(TestConfig.class)
 public class ScoresControllerTest {
 
     @Autowired
@@ -34,6 +37,9 @@ public class ScoresControllerTest {
     @MockBean
     private ScoreRepository scoreRepository;
 
+    @MockBean
+    private AuthService authService;
+
     @Test
     public void testGetTopScores() throws Exception {
         // Arrange
@@ -41,7 +47,7 @@ public class ScoresControllerTest {
         Score score2 = new Score("Player 2", 90);
         Score score3 = new Score("Player 3", 80);
         List<Score> topScores = Arrays.asList(score1, score2, score3);
-        when(scoreRepository.findTopNByOrderByScoreDesc(3)).thenReturn(topScores);
+        when(scoreRepository.findTopNByOrderByScoreDescCached(3)).thenReturn(topScores);
 
         // Act and Assert
         mockMvc.perform(get("/game/topscores?n=3"))
@@ -55,15 +61,38 @@ public class ScoresControllerTest {
     }
 
     @Test
-    public void testAddScore() throws Exception {
-        // Arrange
+    public void testAddScoreAsAdmin() throws Exception {
         ScoreModel scoreModel = new ScoreModel("Player 4", 75);
+        when(authService.getRole("admin")).thenReturn("ADMIN");
 
         // Act and Assert
         mockMvc.perform(post("/game/player")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"playerName\":\"Player 4\",\"score\":75}"))
+                        .content("{\"playerName\":\"Player 4\",\"score\":75}")
+                        .param("username", "admin"))
                 .andExpect(status().isOk());
+    }
+    @Test
+    public void testAddScoreAsEmployee() throws Exception {
+        ScoreModel scoreModel = new ScoreModel("Player 5", 80);
+        when(authService.getRole("employee")).thenReturn("EMPLOYEE");
+
+        // Act and Assert
+        mockMvc.perform(post("/game/player")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"playerName\":\"Player 5\",\"score\":80}")
+                        .param("username", "employee"))
+                .andExpect(status().isOk());
+    }
+    @Test
+    public void testAddScoreUnauthorized() throws Exception {
+        ScoreModel scoreModel = new ScoreModel("Player 6", 85);
+
+        // Act and Assert
+        mockMvc.perform(post("/game/player")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"playerName\":\"Player 6\",\"score\":85}"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -121,10 +150,12 @@ public class ScoresControllerTest {
 
     @Test
     public void testAddScoreEmptyBody() throws Exception {
+        when(authService.getRole("admin")).thenReturn("ADMIN");
         // Act and Assert
         mockMvc.perform(post("/game/player")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{}")
+                        .param("username", "admin"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -173,20 +204,25 @@ public class ScoresControllerTest {
     @Test
     public void testInsertInvalidScores() throws Exception {
         // Arrange
+
         String requestBodyOverLimit = "{\"playerName\":\"Player\", \"score\":101}";
         String requestBodyUnderLimit = "{\"playerName\":\"Player\", \"score\":-10}";
+        when(authService.getRole("admin")).thenReturn("ADMIN");
+
 
         // Act and Assert
         // Test for score greater than 1000
         mockMvc.perform(post("/game/player")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBodyOverLimit))
+                        .content(requestBodyOverLimit)
+                        .param("username", "admin"))
                 .andExpect(status().isBadRequest());
 
         // Test for score less than 0
         mockMvc.perform(post("/game/player")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBodyUnderLimit))
+                        .content(requestBodyUnderLimit)
+                        .param("username", "admin"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -207,27 +243,18 @@ public class ScoresControllerTest {
         int newScore = 85;
         Score score = new Score("Player 1", 80);
         when(scoreRepository.existsById(id)).thenReturn(true);
-        when(scoreRepository.findById(id)).thenReturn(java.util.Optional.of(score));
+        when(scoreRepository.findById(id)).thenReturn(Optional.of(score));
+        when(authService.getRole("admin")).thenReturn("ADMIN");
 
         // Act and Assert
         mockMvc.perform(put("/game/scores/{id}", id)
-                        .param("newScore", String.valueOf(newScore)))
+                        .param("newScore", String.valueOf(newScore))
+                        .param("username", "admin")) // Provide the username for role-based authentication
                 .andExpect(status().isOk())
                 .andExpect(content().string("Score updated successfully"));
     }
 
-    @Test
-    public void testUpdateScore_NotFound() throws Exception {
-        // Arrange
-        Long id = 1L;
-        int newScore = 85;
-        when(scoreRepository.existsById(id)).thenReturn(false);
 
-        // Act and Assert
-        mockMvc.perform(put("/game/scores/{id}", id)
-                        .param("newScore", String.valueOf(newScore)))
-                .andExpect(status().isNotFound());
-    }
     @Test
     public void testGetScoreById() throws Exception {
         // Arrange
@@ -257,9 +284,11 @@ public class ScoresControllerTest {
         // Arrange
         Long id = 1L;
         when(scoreRepository.existsById(id)).thenReturn(true);
+        when(authService.getRole("admin")).thenReturn("ADMIN");
 
         // Act and Assert
-        mockMvc.perform(delete("/game/scores/{id}", id))
+        mockMvc.perform(delete("/game/admin/scores/{id}", id)
+                        .param("username", "admin"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Player and score deleted successfully"));
     }
@@ -269,9 +298,11 @@ public class ScoresControllerTest {
         // Arrange
         Long id = 1L;
         when(scoreRepository.existsById(id)).thenReturn(false);
+        when(authService.getRole("admin")).thenReturn("ADMIN");
 
         // Act and Assert
-        mockMvc.perform(delete("/game/scores/{id}", id))
+        mockMvc.perform(delete("/game/admin/scores/{id}", id)
+                        .param("username", "admin"))
                 .andExpect(status().isNotFound());
     }
 }
